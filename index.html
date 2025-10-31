@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Seasonal Calendar —  Planner</title>
+  <style>
+    /* =====================
+       NEW LOOK: "Artisan Planner"
+       - Light, paper-like canvas
+       - Handcrafted accents, torn tape, stickers
+       - Pill outline buttons
+       - Rounded day tiles with badge dates
+       ===================== */
+
+    :root {
+      --paper: #faf7f2;           /* background */
+      --ink: #1f2937;             /* main text */
+      --muted: #6b7280;           /* muted text */
+      --card: #fffdfa;            /* cards */
+      --line: #e5ddd1;            /* strokes */
+      --ring: 0 0 0 2px color-mix(in oklab, #7c3aed 35%, transparent);
+      --accent: #7c3aed;          /* default accent */
+      --accent-2: #fb7185;        /* secondary accent */
+      --today: #10b981;           /* today outline */
+    }
+
+    /* MONTH THEMES — full recolor so it feels different from previous design */
+    body[data-theme="january"]     { --accent:#2563eb; --accent-2:#60a5fa; --today:#0ea5e9; }
+    body[data-theme="february"]    { --accent:#e11d48; --accent-2:#fb7185; --today:#f43f5e; }
+    body[data-theme="march"]       { --accent:#16a34a; --accent-2:#22c55e; --today:#14b8a6; }
+    body[data-theme="april"]       { --accent:#0891b2; --accent-2:#38bdf8; --today:#06b6d4; }
+    body[data-theme="may"]         { --accent:#65a30d; --accent-2:#a3e635; --today:#84cc16; }
+    body[data-theme="june"]        { --accent:#d97706; --accent-2:#fbbf24; --today:#22d3ee; }
+    body[data-theme="july"]        { --accent:#b91c1c; --accent-2:#ef4444; --today:#f59e0b; }
+    body[data-theme="august"]      { --accent:#f59e0b; --accent-2:#fbbf24; --today:#eab308; }
+    body[data-theme="september"]   { --accent:#65a30d; --accent-2:#f59e0b; --today:#84cc16; }
+    body[data-theme="october"]     { --accent:#9333ea; --accent-2:#f97316; --today:#f59e0b; }
+    body[data-theme="november"]    { --accent:#92400e; --accent-2:#d97706; --today:#f59e0b; }
+    body[data-theme="december"]    { --accent:#065f46; --accent-2:#16a34a; --today:#0ea5e9; }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Inter, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #fffaf3, var(--paper)) fixed;
+      letter-spacing: .2px;
+    }
+
+    .container { max-width: 1180px; margin: 0 auto; padding: clamp(16px, 3vw, 28px); }
+
+    /* HEADER: torn tape + sticker */
+    .planner {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      box-shadow: 0 18px 40px #00000010;
+      overflow: clip;
+      position: relative;
+    }
+    .planner::before {
+      content: "";
+      position: absolute; inset: -8px auto auto 20px; width: 140px; height: 32px;
+      background: repeating-linear-gradient(90deg, #ffe8b4 0 10px, #ffd891 10px 20px);
+      transform: rotate(-2.5deg);
+      clip-path: polygon(0 0, 100% 0, 94% 100%, 0 100%);
+      opacity: .8;
+      box-shadow: 0 2px 6px #0002;
+    }
+
+    header.planner-head {
+      display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+      padding: 18px clamp(14px, 3vw, 24px);
+      border-bottom: 1px dashed var(--line);
+      background: linear-gradient(180deg, #fffefd, #fff9f0);
+    }
+    .brand { display:flex; gap:12px; align-items:center; }
+    .sticker { width:40px; height:40px; display:grid; place-items:center; border-radius: 12px; background: conic-gradient(from 220deg, var(--accent) 0 40%, #fff0 0 100%), conic-gradient(from 30deg, var(--accent-2) 0 40%, #fff0 0 100%); box-shadow: inset 0 0 0 2px #fff8, 0 4px 12px #0001; color:#fff; font-size:20px; }
+    .title { font-weight: 900; font-size: 22px; }
+    .subtitle { color: var(--muted); font-size: 12px; }
+
+    .controls { display:flex; gap:10px; justify-content:center; align-items:center; }
+    .btn {
+      appearance:none; background: #fff; color: var(--ink); border: 2px solid var(--ink);
+      padding: 8px 14px; border-radius: 999px; font-weight: 800; cursor: pointer;
+      box-shadow: 2px 2px 0 var(--ink);
+      transition: transform .08s ease, box-shadow .08s ease, background .2s;
+    }
+    .btn:hover { background: #fff7; }
+    .btn:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
+    .btn.icon { width:42px; height:42px; border-radius:999px; padding:0; display:grid; place-items:center; font-size:18px; }
+    .btn.ghost { border-color: var(--accent); color: var(--accent); box-shadow: 2px 2px 0 var(--accent); background: #fff; }
+
+    .month { font-weight: 900; font-size: clamp(16px, 3vw, 20px); text-transform: uppercase; letter-spacing: .8px; }
+
+    /* LAYOUT: calendar + right rail */
+    .layout { display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; padding: clamp(12px, 2vw, 20px); }
+
+    /* MONTH JUMP (12 mini pills) */
+    .jump { display:grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 8px; }
+    .jump .mini {
+      background:#fff; border:1px dashed var(--line); border-radius: 10px; padding: 6px 8px; font: 800 11px/1 ui-rounded, system-ui;
+      cursor:pointer; text-align:center; color:var(--muted);
+    }
+    .mini:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* CALENDAR GRID */
+    .grid { display:grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+    .dow { text-align:center; font: 800 11px/1.2 ui-rounded; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; padding: 6px 0; }
+
+    .day { position:relative; background:#fff; border:1.5px solid var(--line); border-radius:16px;
+           min-height:110px; padding: 10px 10px 12px; display:grid; grid-template-rows:auto 1fr; gap:6px; box-shadow: 0 4px 0 #00000008; }
+    .day.other { opacity:.45; filter:saturate(.8); }
+    .day.today { outline: 3px dotted var(--today); outline-offset: -6px; }
+
+    .badge { position:absolute; top:-10px; left:-10px; width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center; font: 900 13px/1 ui-rounded; box-shadow: 0 2px 0 #00000020; }
+    .date { justify-self:end; font-weight:900; color:#9a8a73; }
+
+    /* EVENT CHIPS */
+    .events { display:grid; gap:6px; align-content:start; }
+    .chip { display:flex; align-items:center; gap:8px; border:2px dashed color-mix(in oklab, var(--accent) 40%, #0000);
+            background: #fff; padding:6px 8px; border-radius:12px; font: 800 12px/1.1 ui-rounded; cursor:pointer; }
+    .chip .dot { width:12px; height:12px; border-radius:3px; box-shadow: inset 0 0 0 2px #0002; }
+
+    .holiday::after { content: attr(data-emoji); position:absolute; right:8px; bottom:8px; font-size:16px; }
+
+    /* RIGHT RAIL */
+    .rail { display:grid; gap:12px; }
+    .panel { background:#fff; border:1.5px solid var(--line); border-radius:16px; box-shadow: 0 4px 0 #00000008; padding: 12px; }
+    .panel h3 { margin:0 0 8px; font-size:12px; letter-spacing:.6px; color:var(--muted); text-transform:uppercase; }
+
+    .agenda { display:grid; gap:10px; }
+    .row { display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center; border:1px dashed var(--line); border-radius:12px; padding:8px; }
+    .row .title { font-weight:900; }
+    .row .meta { color:var(--muted); font-size:12px; }
+
+    .tools { display:flex; gap:8px; flex-wrap:wrap; }
+    .input { width:100%; border: 2px solid var(--ink); border-radius: 10px; padding:8px 10px; background:#fff; font-weight:700; }
+
+    footer { padding: 10px 16px 18px; color: var(--muted); font-size: 12px; text-align: center; }
+
+    /* DIALOG — notebook sheet (ENHANCED) */
+    dialog { border: 2px solid var(--ink); border-radius: 18px; padding: 0; background: #fff; color: var(--ink); box-shadow: 14px 14px 0 #0002, 0 24px 60px #00000020; width:min(640px, 94vw); overflow:hidden; }
+    dialog::backdrop { background: rgba(31,41,55,.35); backdrop-filter: blur(3px); }
+    .dlg-head { display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:2px dashed var(--line); background: linear-gradient(180deg, #fffefd,#fff9f2); position:sticky; top:0; z-index:2; }
+    .dlg-head #dlgTitle { font-size:18px; letter-spacing:.4px; }
+    #closeDlg { width:42px; height:42px; border-radius:999px; border:2px solid var(--ink); display:grid; place-items:center; background:#fff; box-shadow: 2px 2px 0 var(--ink); font-size:16px; }
+    #closeDlg:hover { background:#fff7; }
+    #closeDlg:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
+
+    .dlg-body { padding:18px; display:grid; gap:14px; max-height:min(70vh, 520px); overflow:auto; background: repeating-linear-gradient(0deg, #fff 0 26px, #fff 26px 52px), linear-gradient(180deg, #fff, #fffdf8); }
+    .dlg-grid { display:grid; grid-template-columns: 120px 1fr; gap:12px; align-items:center; }
+    .dlg-grid label { font-weight:900; color:var(--muted); letter-spacing:.4px; }
+
+    #eventDialog .input, #eventDialog select.input { border:2px solid var(--ink); border-radius:14px; padding:12px 14px; background:#fff; font-weight:800; outline:none; box-shadow: inset 0 -3px 0 #0000000d; }
+    #eventDialog .input::placeholder { color:#9aa1ab; font-weight:700; opacity:.95; }
+    #eventDialog .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent), inset 0 -3px 0 #0000000d; }
+    #eventDialog input[type="color"].input { padding:0; height:44px; border-radius:999px; cursor:pointer; }
+
+    .dlg-actions { display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:2px dashed var(--line); background: linear-gradient(180deg,#fffdf8,#fffaf1); position:sticky; bottom:0; z-index:2; }
+    .dlg-actions .btn.ghost { border-color: var(--accent); color: var(--accent); box-shadow: 2px 2px 0 var(--accent); }
+    .dlg-actions .btn:last-child { background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 80%, #0000), color-mix(in oklab, var(--accent-2) 75%, #0000)); color:#fff; border-color: transparent; box-shadow: 2px 2px 0 color-mix(in oklab, var(--accent) 85%, #0000); }
+
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { .dlg-grid { grid-template-columns: 1fr; } }
+
+    /* Corner seasonal badge (top-left, code-only) */
+.corner-badge{
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background:
+    linear-gradient(180deg, #ffffffcc, #fffaf0dd);
+  border: 2px solid #ffffffaa;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px #0004, inset 0 0 0 1px #ffffff80;
+  transform: rotate(-2.5deg);
+  backdrop-filter: blur(6px);
+  will-change: transform;
+  animation: cbFloat 7s ease-in-out infinite;
+}
+.corner-badge:hover { transform: rotate(-1deg) scale(1.02); }
+
+.cb-emoji{
+  font-size: 36px;
+  filter: drop-shadow(0 3px 6px #0002);
+}
+.cb-text{
+  line-height: 1.05;
+}
+.cb-text .cb-title{
+  font: 900 12px/1 ui-rounded, system-ui, sans-serif;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: #374151;
+}
+.cb-text .cb-month{
+  display: inline-block;
+  margin-top: 2px;
+  font: 800 14px/1.1 ui-rounded, system-ui, sans-serif;
+  color: #111827;
+}
+
+/* subtle bob */
+@keyframes cbFloat {
+  0%, 100% { transform: rotate(-2.5deg) translateY(0); }
+  50% { transform: rotate(-2deg) translateY(-6px); }
+}
+
+/* tiny close target (optional; keep if you want dismiss) */
+.corner-badge .cb-close{
+  position: absolute;
+  top: -10px; right: -10px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #111827;
+  font: 900 14px/22px ui-rounded, system-ui;
+  color: #111827;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #111827;
+}
+.corner-badge .cb-close:active{ transform: translate(2px,2px); box-shadow: 0 0 0 #111827; }
+
+  </style>
+</head>
+<body data-theme="october">
+    <!-- Corner seasonal badge (no video) -->
+<div id="cornerBadge" class="corner-badge" aria-hidden="true">
+  <div id="cbEmoji" class="cb-emoji">🎃</div>
+  <div class="cb-text">
+    <div class="cb-title">Seasonal</div>
+    <div id="cbMonth" class="cb-month">October</div>
+  </div>
+  <!-- optional dismiss: remove this button if you don't want it -->
+  <button id="cbClose" class="cb-close" title="Hide">×</button>
+</div>
+
+  <div class="container">
+    <section class="planner" role="region" aria-label="Seasonal Planner">
+      <header class="planner-head">
+        <div class="brand">
+          <div class="sticker" aria-hidden="true">📌</div>
+          <div>
+            <div class="title">Artisan Planner</div>
+            <div class="subtitle">A pretty, seasonal calendar you can write on</div>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="btn" id="prevBtn">⟵ Prev</button>
+          <div class="month" id="monthLabel" aria-live="polite"></div>
+          <button class="btn" id="nextBtn">Next ⟶</button>
+        </div>
+        <div class="controls">
+          <button class="btn ghost" id="todayBtn">Today</button>
+          <!-- Auto Theme dropdown removed -->
+        </div>
+      </header>
+
+      <div class="layout">
+        <main>
+          <div class="jump" id="jumpGrid"></div>
+          <div class="grid" id="calendarGrid" aria-describedby="monthLabel"></div>
+        </main>
+        <aside class="rail">
+          <div class="panel">
+            <h3>Agenda</h3>
+            <div class="agenda" id="agendaList"></div>
+          </div>
+          <div class="panel">
+            <h3>Tools</h3>
+            <div class="tools">
+              <button class="btn ghost icon" id="exportBtn" title="Export events as JSON">⤓</button>
+              <button class="btn ghost icon" id="importBtn" title="Import events from JSON">⤒</button>
+              <button class="btn ghost icon" id="clearBtn"  title="Clear all events">🗑️</button>
+            </div>
+            <div style="margin-top:10px;">
+              <input class="input" id="searchInput" placeholder="Search events…" />
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <footer>
+        New style applied • 12 auto-themes • Click any day to add events • Local storage • Month jump shortcuts
+      </footer>
+    </section>
+  </div>
+
+  <!-- Event Dialog -->
+  <dialog id="eventDialog">
+    <div class="dlg-head">
+      <strong id="dlgTitle">Add event</strong>
+      <button class="btn" id="closeDlg">✕</button>
+    </div>
+    <div class="dlg-body">
+      <div class="dlg-grid">
+        <label for="dateInput">Date</label>
+        <input class="input" type="date" id="dateInput" />
+      </div>
+      <div class="dlg-grid">
+        <label for="titleInput">Title</label>
+        <input class="input" type="text" id="titleInput" placeholder="Event title" />
+      </div>
+      <div class="dlg-grid">
+        <label for="emojiInput">Emoji</label>
+        <input class="input" type="text" id="emojiInput" placeholder="e.g. 🎉" maxlength="4" />
+      </div>
+      <div class="dlg-grid">
+        <label for="colorInput">Color</label>
+        <input class="input" type="color" id="colorInput" value="#7c3aed" />
+      </div>
+      <div class="dlg-grid">
+        <label for="descInput">Notes</label>
+        <textarea class="input" id="descInput" rows="3" placeholder="Optional notes…"></textarea>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn ghost" id="deleteBtn" style="display:none">Delete</button>
+      <button class="btn" id="saveBtn">Save</button>
+    </div>
+  </dialog>
+
+  <script>
+
+
+    // === Corner seasonal badge (code-only) ===
+(function(){
+  const badge = document.getElementById('cornerBadge');
+  if (!badge) return;
+
+  const emojiEl = document.getElementById('cbEmoji');
+  const monthEl = document.getElementById('cbMonth');
+  const closeEl = document.getElementById('cbClose');
+
+  const monthNames = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December'
+  ];
+
+  // Small curated sets per month (feel free to tweak)
+  const emojiSets = {
+    0: ['🎆','❄️','☕'],            // Jan
+    1: ['💘','🌹','🍫'],           // Feb
+    2: ['🍀','🌱','🌤️'],          // Mar
+    3: ['🌧️','🌈','🌷'],          // Apr
+    4: ['🌸','🌿','🐝'],           // May
+    5: ['🏖️','☀️','🍉'],          // Jun
+    6: ['🎇','🧊','🌭'],           // Jul
+    7: ['🌞','🍦','🌻'],           // Aug
+    8: ['🍂','📚','🍎'],           // Sep
+    9: ['🎃','🕸️','👻'],          // Oct
+    10:['🦃','🥧','🍁'],           // Nov
+    11:['🎄','🎁','❄️']            // Dec
+  };
+
+  const now = new Date();
+  let m = now.getMonth();
+  let idx = 0;
+
+  monthEl.textContent = monthNames[m];
+
+  function renderEmoji() {
+    const set = emojiSets[m] || ['📅'];
+    emojiEl.textContent = set[idx % set.length];
+    idx++;
+  }
+
+  renderEmoji();
+  let timer = setInterval(renderEmoji, 2800);
+
+  // optional: pause on hover
+  badge.addEventListener('mouseenter', () => { clearInterval(timer); });
+  badge.addEventListener('mouseleave', () => { timer = setInterval(renderEmoji, 2800); });
+
+  // optional: dismiss button
+  if (closeEl) closeEl.addEventListener('click', () => { badge.remove(); });
+})();
+
+
+    // =====================
+    // STATE + UTILITIES
+    // =====================
+    const grid = document.getElementById('calendarGrid');
+    const label = document.getElementById('monthLabel');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const todayBtn = document.getElementById('todayBtn');
+    const jumpGrid = document.getElementById('jumpGrid');
+
+    const agendaList = document.getElementById('agendaList');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const searchInput = document.getElementById('searchInput');
+
+    const eventDialog = document.getElementById('eventDialog');
+    const closeDlg = document.getElementById('closeDlg');
+    const dateInput = document.getElementById('dateInput');
+    const titleInput = document.getElementById('titleInput');
+    const emojiInput = document.getElementById('emojiInput');
+    const colorInput = document.getElementById('colorInput');
+    const descInput = document.getElementById('descInput');
+    const saveBtn = document.getElementById('saveBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const dlgTitle = document.getElementById('dlgTitle');
+
+    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    let view = new Date(); view.setDate(1);
+    let editingId = null;
+
+    const LS_KEY = 'artisanPlannerEvents_v1';
+
+    const fmtDateISO = (d) => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    function uid(){ return Math.random().toString(36).slice(2,9) + Date.now().toString(36); }
+
+    function loadEvents(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } }
+    function saveEvents(list){ localStorage.setItem(LS_KEY, JSON.stringify(list)); }
+
+    function getEventsForDate(dateISO){ return loadEvents().filter(e => e.date === dateISO).sort((a,b)=> a.title.localeCompare(b.title)); }
+
+    function monthTheme(idx){
+      return [
+        'january','february','march','april','may','june','july','august','september','october','november','december'
+      ][idx] || 'october';
+    }
+    function getTheme(){ return monthTheme(view.getMonth()); } // auto only
+    function setTheme(theme){ document.body.setAttribute('data-theme', theme); }
+
+    function getHolidays(year, month){
+      const map = new Map();
+      if (month === 0)   map.set(1,'🎆');
+      if (month === 1)   map.set(14,'💘');
+      if (month === 2)   map.set(17,'🍀');
+      if (month === 3)   [1,22].forEach(d=>map.set(d,'🌧️'));
+      if (month === 4)   map.set(1,'🌸');
+      if (month === 5)   [1,21].forEach(d=>map.set(d,'🏖️'));
+      if (month === 6)   map.set(4,'🎇');
+      if (month === 7)   [1,15].forEach(d=>map.set(d,'🌞'));
+      if (month === 8)   [1,23].forEach(d=>map.set(d,'🍂'));
+      if (month === 9)   for(let d=25; d<=31; d++) map.set(d,'🎃');
+      if (month === 10)  { let c=0, dt=new Date(year, month, 1); while(dt.getMonth()===month){ if(dt.getDay()===4){ c++; if(c===4) map.set(dt.getDate(),'🦃'); } dt.setDate(dt.getDate()+1);} }
+      if (month === 11)  [1,24,25,31].forEach(d=>map.set(d,'🎄'));
+      return map;
+    }
+
+    // =====================
+    // RENDER
+    // =====================
+    function renderDow(){
+      grid.innerHTML = '';
+      dow.forEach(d=>{ const el=document.createElement('div'); el.className='dow'; el.textContent=d; grid.appendChild(el); });
+    }
+
+    function createDayCell(dayNum, otherMonth){
+      const cell = document.createElement('div');
+      cell.className = 'day' + (otherMonth ? ' other' : '');
+      const badge = document.createElement('div'); badge.className='badge'; badge.textContent=dayNum; cell.appendChild(badge);
+      const dateCorner = document.createElement('div'); dateCorner.className='date'; dateCorner.textContent=String(dayNum).padStart(2,'0'); cell.appendChild(dateCorner);
+      const eventsDiv = document.createElement('div'); eventsDiv.className='events'; cell.appendChild(eventsDiv);
+      return {cell, eventsDiv};
+    }
+
+    function renderJump(){
+      jumpGrid.innerHTML = '';
+      months.forEach((m, i)=>{
+        const btn = document.createElement('button'); btn.className='mini'; btn.textContent=m.slice(0,3);
+        btn.addEventListener('click', ()=>{ view.setMonth(i); render(); });
+        jumpGrid.appendChild(btn);
+      });
+    }
+
+    function render(){
+      renderJump();
+      renderDow();
+      const year = view.getFullYear();
+      const month = view.getMonth();
+      const theme = getTheme(); setTheme(theme);
+      label.textContent = `${months[month]} ${year}`;
+
+      const firstDayIdx = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrev = new Date(year, month, 0).getDate();
+
+      const today = new Date(); const isTodayMonth = today.getFullYear()===year && today.getMonth()===month;
+      const holidays = getHolidays(year, month);
+
+      // Leading
+      for(let i=0;i<firstDayIdx;i++){
+        const d = daysInPrev - firstDayIdx + 1 + i;
+        const {cell} = createDayCell(d, true); grid.appendChild(cell);
+      }
+
+      // Month days
+      for(let d=1; d<=daysInMonth; d++){
+        const {cell, eventsDiv} = createDayCell(d, false);
+        const dateISO = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if(isTodayMonth && d===today.getDate()) cell.classList.add('today');
+        if(holidays.has(d)){ cell.classList.add('holiday'); cell.dataset.emoji = holidays.get(d); }
+
+        const events = getEventsForDate(dateISO);
+        for(const ev of events){
+          const chip = document.createElement('div'); chip.className='chip'; chip.dataset.id=ev.id; chip.title=ev.notes||'';
+          const dot = document.createElement('span'); dot.className='dot'; dot.style.background = ev.color || '#7c3aed'; chip.appendChild(dot);
+          const txt = document.createElement('span'); txt.textContent = `${ev.emoji||''} ${ev.title}`.trim(); chip.appendChild(txt);
+          chip.addEventListener('click', (e)=>{ e.stopPropagation(); openDialog(dateISO, ev); });
+          eventsDiv.appendChild(chip);
+        }
+
+        cell.addEventListener('click', ()=> openDialog(dateISO));
+        grid.appendChild(cell);
+      }
+
+      // Trailing
+      const totalCells = 7 + firstDayIdx + daysInMonth; const remainder = totalCells % 7;
+      if(remainder!==0){ const add = 7 - remainder; for(let i=1;i<=add;i++){ const {cell} = createDayCell(i, true); grid.appendChild(cell);} }
+
+      renderAgenda();
+    }
+
+    // =====================
+    // AGENDA + SEARCH
+    // =====================
+    function renderAgenda(filter=''){
+      const list = loadEvents().sort((a,b)=> (a.date+b.title).localeCompare(b.date+b.title));
+      agendaList.innerHTML = '';
+      const terms = filter.trim().toLowerCase();
+      for(const ev of list){
+        if(terms && !(ev.title.toLowerCase().includes(terms) || (ev.notes||'').toLowerCase().includes(terms))) continue;
+        const row = document.createElement('div'); row.className='row';
+        const info = document.createElement('div');
+        const t = document.createElement('div'); t.className='title'; t.textContent = `${ev.emoji||''} ${ev.title}`.trim(); info.appendChild(t);
+        const m = document.createElement('div'); m.className='meta'; m.textContent = `${ev.date}`; info.appendChild(m);
+        const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='8px';
+        const edit = document.createElement('button'); edit.className='btn ghost'; edit.textContent='Edit'; edit.addEventListener('click',()=>openDialog(ev.date, ev));
+        const del = document.createElement('button'); del.className='btn ghost'; del.textContent='Delete'; del.addEventListener('click',()=>{ removeEvent(ev.id); });
+        actions.appendChild(edit); actions.appendChild(del);
+        row.appendChild(info); row.appendChild(actions);
+        agendaList.appendChild(row);
+      }
+    }
+
+    searchInput.addEventListener('input', ()=> renderAgenda(searchInput.value));
+
+    // =====================
+    // DIALOG LOGIC
+    // =====================
+    function openDialog(dateISO, ev){
+      editingId = ev?.id || null;
+      dlgTitle.textContent = editingId ? 'Edit event' : 'Add event';
+      dateInput.value = dateISO || fmtDateISO(new Date());
+      titleInput.value = ev?.title || '';
+      emojiInput.value = ev?.emoji || '';
+      colorInput.value = ev?.color || '#7c3aed';
+      descInput.value = ev?.notes || '';
+      deleteBtn.style.display = editingId ? 'inline-flex' : 'none';
+      eventDialog.showModal();
+    }
+    function closeDialog(){ eventDialog.close(); editingId = null; }
+
+    function upsertEvent(){
+      const date = dateInput.value || fmtDateISO(new Date());
+      const title = (titleInput.value || '').trim();
+      if(!title){ alert('Please enter a title.'); return; }
+      const data = loadEvents();
+      if(editingId){
+        const i = data.findIndex(e=>e.id===editingId); if(i>-1){ data[i] = {...data[i], date, title, emoji:emojiInput.value.trim(), color:colorInput.value, notes:descInput.value.trim()}; }
+      } else {
+        data.push({ id: uid(), date, title, emoji:emojiInput.value.trim(), color:colorInput.value, notes:descInput.value.trim() });
+      }
+      saveEvents(data); closeDialog(); render();
+    }
+    function removeEvent(id){ const data = loadEvents().filter(e=>e.id!==id); saveEvents(data); render(); }
+
+    closeDlg.addEventListener('click', closeDialog);
+    saveBtn.addEventListener('click', upsertEvent);
+    deleteBtn.addEventListener('click', ()=>{ if(editingId){ removeEvent(editingId); closeDialog(); } });
+
+    // =====================
+    // NAV + TOOLS
+    // =====================
+    prevBtn.addEventListener('click', ()=>{ view.setMonth(view.getMonth()-1); render(); });
+    nextBtn.addEventListener('click', ()=>{ view.setMonth(view.getMonth()+1); render(); });
+    todayBtn.addEventListener('click', ()=>{ const now=new Date(); view = new Date(now.getFullYear(), now.getMonth(), 1); render(); });
+
+    exportBtn.addEventListener('click', ()=>{
+      const data = loadEvents();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='planner-events.json'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    });
+
+    importBtn.addEventListener('click', ()=>{
+      const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+      inp.onchange = ()=>{ const file = inp.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = ()=>{
+        try { const list = JSON.parse(reader.result); if(!Array.isArray(list)) throw new Error('Invalid'); saveEvents(list); render(); }
+        catch { alert('Invalid JSON file.'); }
+      }; reader.readAsText(file); };
+      inp.click();
+    });
+
+    clearBtn.addEventListener('click', ()=>{ if(confirm('Clear all events?')){ saveEvents([]); render(); } });
+
+    // =====================
+    // INIT
+    // =====================
+    (function init(){ render(); })();
+  </script>
+</body>
+</html>
+
+</body>
+</html>
